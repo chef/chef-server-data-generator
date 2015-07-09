@@ -1,3 +1,4 @@
 source 'https://rubygems.org'
 
+gem 'chef'
 gem 'knife-ec-backup', :git => 'https://github.com/chef/knife-ec-backup.git'
