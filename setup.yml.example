@@ -1,9 +1,27 @@
-users:
-  count: 20
-orgs:
-  count: 10
-  per_org:
-    users: 3
-    admins: 1
-    groups: 5
-    clients: 30
+ec:
+  users:
+    count: 20
+  orgs:
+    count: 10
+    per_org:
+      users: 3
+      admins: 1
+      groups: 5
+      clients: 30
+      nodes: 50
+osc:
+  users:
+    count: 20
+    admins: 2
+  clients:
+    count: 20
+    admins: 2
+    validators: 2
+  nodes:
+    count: 50
+  roles:
+    count: 20
+  data_bags:
+    count: 20
+    items_per_bag: 5
+    keys_per_bag: 20

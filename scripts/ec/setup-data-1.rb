@@ -1,10 +1,11 @@
 require 'securerandom'
 require 'yaml'
+require File.expand_path('../../data_creation', __FILE__)
 
 begin
-  @create_parms = YAML.load_file("setup.yml")
+  @create_parms = YAML.load_file("setup.yml")["ec"]
 rescue
-  @create_parms = YAML.load_file("setup.yml.example")
+  @create_parms = YAML.load_file("setup.yml.example")["ec"]
 end
 
 @time_identifier = Time.now.to_i
@@ -16,6 +17,7 @@ users_per_org = @create_parms["orgs"]["per_org"]["users"]
 admins_per_org = @create_parms["orgs"]["per_org"]["admins"]
 clients_per_org = @create_parms["orgs"]["per_org"]["clients"]
 groups_per_org =  @create_parms["orgs"]["per_org"]["groups"]
+nodes_per_org =  @create_parms["orgs"]["per_org"]["nodes"]
 
 num_users.times do |x|
   # Not impossible that we'll see periodic duplicates here,
@@ -44,8 +46,12 @@ num_orgs.times do
     owning_group = member_groups.shift
     add_to_group(org_name, owning_group, { :groups => member_groups} )
   end
+
+  nodes_per_org.times do |x|
+      create_node("node-#{@time_identifier}-#{SecureRandom.hex(4)}", "/organizations/#{org_name}")
+  end
   # Sanity check:
-   g = api.get("organizations/#{org_name}/groups/admins")
+  g = api.get("organizations/#{org_name}/groups/admins")
   puts "DEBUG: ADMIN GROUP NOW IS: #{g.inspect}"
 end
 
@@ -61,8 +67,15 @@ BEGIN {
 
   def create_user(name)
     puts "...creating user #{name}"
-    user = api.post("users",  { "display_name" => name, "email" => "#{name}@#testing.com", "username"=> name, "password" => "password"})
-    File.open("testdata/keys/#{name}.pem", "w") { |f| f.write(user['private_key']) }
+    user = api.post("users",  { "display_name" => name, "email" => "#{name}@testing.com", "username"=> name, "password" => "password"})
+    if user['private_key'].nil?
+      # API V1, delete user and try again with proper request
+      api.delete("users/#{name}")
+      user = api.post("users",  { "display_name" => name, "email" => "#{name}@testing.com", "username"=> name, "password" => "password", "create_key" => true})
+      File.open("testdata/keys/#{name}.pem", "w") { |f| f.write(user['chef_key']['private_key']) }
+    else
+      File.open("testdata/keys/#{name}.pem", "w") { |f| f.write(user['private_key']) }
+    end
     @user_names << name
   end
 
@@ -95,8 +108,13 @@ BEGIN {
   def create_org_client(org_name, validator)
     client_name = "client-#{SecureRandom.hex(4)}-#{org_name}"
     puts  "... creating client #{client_name}"
-    result = api.post("organizations/#{org_name}/clients", { "clientname" => client_name, "validator" => validator, "private_key" => true })
-    File.open("testdata/keys/#{client_name}.pem", "w") { |f| f.write(result['private_key']) }
+    begin # API V0
+      result = api.post("organizations/#{org_name}/clients", { "clientname" => client_name, "validator" => validator, "private_key" => true })
+      File.open("testdata/keys/#{client_name}.pem", "w") { |f| f.write(result['private_key']) }
+    rescue # API V1
+      result = api.post("organizations/#{org_name}/clients", { "clientname" => client_name, "validator" => validator, "create_key" => true })
+      File.open("testdata/keys/#{client_name}.pem", "w") { |f| f.write(result['chef_key']['private_key']) }
+    end
     @orgs[org_name]["clients"] << client_name
   end
 
@@ -126,6 +144,7 @@ BEGIN {
     add_to_group(name, "billing-admins", {:users => admins} )
 
   end
+
   def random_elements(min, max, ary)
     # Trusting you to pass in valid min/max here...
     count = rand(max - min) + min

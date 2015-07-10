@@ -24,11 +24,32 @@ dpkg -i $private-chef-installer.deb
 ./setup.sh
 ```
 
+#### Enterprise Chef 11 and Chef Server 12
+
+Make any changes you might need for your `.chef/knife-in-guest.rb` file then run:
+
+```
+./setup-ec.sh
+```
+
+#### Open Source Chef Server 11
+
+First update your .chef/knife-in-guest.rb file to be valid for OSC and your server. 
+You will likely need to change `node_name` to `"admin"` and `client_key` to `"/etc/chef-server/admin.pem"`. Then run:
+
+```
+./setup-osc.sh
+```
+
 #### Optional
 
 - before running setup.sh, copy `setup.yml.example` to `setup.yml` and customize
 
 #### Upgrade and Delta Capture (Work in Progress)
+
+This only works for EC 11 and CS 12 currently. 
+Does not work for OSC 11 as knife-ec-backup is how data is gathered and that tool does not support OSC.
+Futhermore, a simple diff between the data would be more complex, as the OSC data gains an org on migration to CS 12.
 
 #### On the Guest ####
 Once the above is complete, you'll need to capture the current state of
@@ -90,7 +111,9 @@ upgrade.
       ideally across the range of supported objects.
 - [ ] org invite creation and validation - is this in ec backup? (yes to
       2.x but what about 1.x? )
-- [ ] OSC11.2 support
+- [ ] OSC 11.2 support for data verification
+- [ ] Better cookbook data generation
+- [ ] Environments to OSC and EC data generation
 - [ ] knife ec backup: better to have a ruby 2 install on this vm so
       that we can start with 2.x? Currently it's a little broken,
       getting ec installed.
