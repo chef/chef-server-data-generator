@@ -1,4 +1,5 @@
 require 'yaml'
+require 'json'
 require 'thread'
 require 'logger'
 
@@ -28,12 +29,15 @@ def writes_for_thread(thread_number)
 end
 
 created_objects = YAML.load_file("testdata/created-objects.yml")
+ohai_data = JSON.parse(File.read("testdata/ohaidata.json"))
 
 logger.info("Retrieving node objects from server")
 org = Chef::Config['chef_server_url'].split("/")[-1]
 nodes = created_objects["orgs"][org]["nodes"]
 node_objects = nodes.map do |n|
-  api.get("/nodes/#{n}")
+  o = api.get("/nodes/#{n}")
+  o.automatic_attrs = ohai_data
+  o
 end
 
 threads = []
@@ -45,7 +49,8 @@ Thread.abort_on_exception = true
     logger.info "Starting worker thread #{i}"
     1.upto(count).each do
       node_object = node_objects.sample
-      node_object.default_attrs = {"test_attr" => "test_value"}
+      # Ensure that the node data changes
+      node_object.default_attrs = {"test_attr" => "#{rand(10000)}-#{rand(10000)}"}
       node_object.save
     end
   end
