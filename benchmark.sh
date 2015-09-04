@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 FILES=testdata/admin-config/*.rb
 for f in $FILES
