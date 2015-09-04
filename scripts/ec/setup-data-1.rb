@@ -11,27 +11,23 @@ end
 @time_identifier = Time.now.to_i
 @orgs = {}
 @user_names = []
-num_users = @create_parms["users"]["count"]
 num_orgs = @create_parms["orgs"]["count"]
 users_per_org = @create_parms["orgs"]["per_org"]["users"]
-admins_per_org = @create_parms["orgs"]["per_org"]["admins"]
 clients_per_org = @create_parms["orgs"]["per_org"]["clients"]
 groups_per_org =  @create_parms["orgs"]["per_org"]["groups"]
 nodes_per_org = @create_parms["orgs"]["per_org"]["nodes"]
 roles_per_org = @create_parms["orgs"]["per_org"]["roles"]
 
-num_users.times do |x|
-  # Not impossible that we'll see periodic duplicates here,
-  # just rather unlikely.
-  create_user("user-#{@time_identifier}-#{SecureRandom.hex(4)}")
-end
-
 num_orgs.times do
+  org_users = []
+  users_per_org.times do |x|
+    user = "user-#{@time_identifier}-#{SecureRandom.hex(4)}"
+    org_users << user
+    create_user(user)
+  end
+
   org_name = "org-#{@time_identifier}-#{SecureRandom.hex(4)}"
-  # more-or-less randomly pick our org users from the pool of all users
-  org_users = random_elements(users_per_org, users_per_org, @user_names)
-  org_admins = random_elements(admins_per_org, admins_per_org, org_users)
-  create_org(org_name, org_users, org_admins)
+  create_org(org_name, org_users, org_users[0])
   clients_per_org.times { create_org_client(org_name, false) }
   org_clients = @orgs[org_name]["clients"]
   # Creates randomly named group with random membership
@@ -127,7 +123,7 @@ BEGIN {
     add_to_group(org_name, group_name, {:users => memberusers, :clients => memberclients})
   end
 
-  def create_org(name, users, admins)
+  def create_org(name, users, admin)
     puts "...creating org #{name}"
     org = api.post("organizations", { "full_name" => "#{name}", "name" => "#{name}" })
     validator_key = "testdata/keys/#{name}-validator.pem"
@@ -139,14 +135,15 @@ BEGIN {
     end
     @orgs[name] =  { "groups" => { "billing-admins" => {},  "admins" => {}, "users" => {}},
                      "clients" => ["#{name}-validator"] }
-    add_to_group(name, "admins", {:users => admins} )
-    add_to_group(name, "billing-admins", {:users => admins} )
+    puts "......associating admin #{admin}"
+    add_to_group(name, "admins", {:users => [admin]} )
+    add_to_group(name, "billing-admins", {:users => [admin]} )
 
     # write a knife config for each admin to perform admin specific actions
-    chef_server_url = Chef::Config['chef_server_url']
-    admins.each do |admin|
-      knife = "testdata/admin-config/#{admin}.rb"
-      knife_content = <<-EOH
+    chef_server_url = Chef::Config['chef_server_url']    
+    knife = "testdata/admin-config/#{admin}.rb"
+    puts "......writing admin config #{knife}"
+    knife_content = <<-EOH
 current_dir = File.dirname(__FILE__)
 chef_server_url "#{chef_server_url}/organizations/#{name}"
 node_name "#{admin}"
@@ -154,11 +151,9 @@ client_key "\#{current_dir}/../keys/#{admin}.pem"
 ssl_verify_mode :verify_none
 cookbook_path [ "\#{current_dir}/../../cookbooks" ]
 EOH
-      File.open(knife, "w") do |f|
-        f.write(knife_content)
-      end
+    File.open(knife, "w") do |f|
+      f.write(knife_content)
     end
-
   end
 
   def random_elements(min, max, ary)

@@ -28,6 +28,8 @@ Then on Enterprise Chef 11 and Chef Server 12:
 
 ```
 ./setup-ec.sh
+(optionally run benchmark)
+time ./benchmark.sh
 ```
 
 On Open Source Chef Server 11:
