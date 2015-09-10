@@ -15,7 +15,7 @@ logger = Logger.new(STDOUT)
 logger.formatter = proc {|severity, datetime, progname, msg| msg + "\n" }
 
 #
-# Returns an array with how many writes
+# Takes and returns an integer with how many writes
 # each thread should do.  For now, if TOTAL/WRITES isnt'
 # evenly divisible by the thread count, we put the remainder on the last one.
 #
