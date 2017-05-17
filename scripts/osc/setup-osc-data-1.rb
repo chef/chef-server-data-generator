@@ -72,6 +72,16 @@ num_data_bags.times do |x|
   create_data_bag("data-bag-#{@time_identifier}-#{SecureRandom.hex(4)}", items_per_bag, keys_per_bag, @time_identifier, "")
 end
 
+### TESTCASE DATA ###
+if @create_parms["test_case_data"]
+  # POOL-607 - client & nodes with '.' in the name
+  slug = SecureRandom.hex(4)
+  name_607 = "pool-607.#{@time_identifier}-#{slug}"
+  create_client(name_607)
+  create_node(name_607)
+end
+
+
 ##################################################################################
 BEGIN {
   def create_user(name, admin)

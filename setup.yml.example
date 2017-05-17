@@ -30,3 +30,4 @@ osc:
     count: 20
     items_per_bag: 5
     keys_per_bag: 20
+  test_case_data: true
